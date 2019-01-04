@@ -1,9 +1,6 @@
 <?php
 namespace Phillipsdata\LinkedIn;
 
-require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'linkedin_api_response.php';
-require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'linkedin_oauth_response.php';
-
 class LinkedIn
 {
     /**
