@@ -86,6 +86,7 @@ class LinkedIn
                 break;
             case 'POST':
                 curl_setopt($ch, CURLOPT_POST, 1);
+                // Fall through to set post data
             default:
                 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
                 break;
@@ -144,7 +145,7 @@ class LinkedIn
 
         $tokenReponse = $this->makeRequest('accessToken', $requestData, 'GET', true);
 
-        if ($tokenReponse->status() < 300) {
+        if ($tokenReponse->status() == 200) {
             $this->accessToken = $tokenReponse->response();
         }
 
@@ -227,10 +228,10 @@ class LinkedIn
      * @param array $data An array of data describing the post on LinkedIn including
      *  - specificContent: A collection of fields describing the shared content.
      *  - - com.linkedin.ugc.ShareContent
- 	 *  - - - shareCommentary: Provides the primary content for the share.
+     *  - - - shareCommentary: Provides the primary content for the share.
      *  - - - - text: The text to be shared
- 	 *  - - - shareMediaCategory: Represents the media assets attached to the share. ('NONE', 'ARTICLE', 'IMAGE')
- 	 *  - - - media: A collection of fields describing the attached media including (optional)
+     *  - - - shareMediaCategory: Represents the media assets attached to the share. ('NONE', 'ARTICLE', 'IMAGE')
+     *  - - - media: A collection of fields describing the attached media including (optional)
      *  - - - - description: A short description for your image or article. (optional)
      *  - - - - media: ID of the uploaded image asset. (Not required for uploading an article)
      *  - - - - originalUrl: The URL of the article you would like to share here. (Required for uploading an article)
@@ -240,10 +241,11 @@ class LinkedIn
      *      CONNECTIONS: The share will be viewable by 1st-degree connections only.
      * @return LinkedInAPIResponse
      */
-    public function share(array $data) {
+    public function share(array $data)
+    {
         // Set the author based on the currently authenticated user
         $userResponse = $this->getUser();
-        if ($userResponse->status() < 300) {
+        if ($userResponse->status() == 200) {
             $user = $userResponse->response();
 
             $data['author'] = 'urn:li:person:' . $user->id;
@@ -265,7 +267,8 @@ class LinkedIn
      *
      * @return LinkedInAPIResponse
      */
-    public function getUser() {
+    public function getUser()
+    {
         return $this->get('v2/me');
     }
 }

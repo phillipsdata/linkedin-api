@@ -5,7 +5,7 @@ interface LinkedInResponseInterface
 {
     /**
      * @param string $apiResponse A string containing data from the LinkedIn API in json format
-     * @param int $headerLength The length of the header within the apiResoponse string
+     * @param int $headerLength The length of the header within the apiResponse string
      */
     public function __construct($apiResponse, $headerLength);
 

@@ -42,7 +42,7 @@ abstract class LinkedInResponse implements LinkedInResponseInterface
         $this->raw = $apiResponse;
 
         // Format the response body
-        $this->response =  json_decode($body);
+        $this->response = json_decode($body);
 
         // Parse the header
         $headerList = explode("\n", $headers);
