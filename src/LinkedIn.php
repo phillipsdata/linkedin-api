@@ -1,6 +1,10 @@
 <?php
 namespace Phillipsdata\LinkedIn;
 
+/**
+ * This class integrates with the Consumer Solutions Platform LinkedIn API
+ * See the API docs here https://docs.microsoft.com/en-us/linkedin/consumer/
+ */
 class LinkedIn
 {
     /**
@@ -68,7 +72,7 @@ class LinkedIn
      * @param array $data The data to send with the request
      * @param string $method The data transfer method to use
      * @param string $oauthRequest True to send the request to the oauth endpoint, false otherwise
-     * @return stdClass The data returned by the request
+     * @return LinkedInResponseInterface The data returned by the request
      */
     private function makeRequest($action, array $data, $method, $oauthRequest = false)
     {
@@ -82,6 +86,7 @@ class LinkedIn
                 break;
             case 'POST':
                 curl_setopt($ch, CURLOPT_POST, 1);
+                // Fall through to set post data
             default:
                 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
                 break;
@@ -90,7 +95,7 @@ class LinkedIn
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_HEADER, 1);
         curl_setopt($ch, CURLOPT_URL, $url);
 
         $headers = [
@@ -105,13 +110,17 @@ class LinkedIn
 
         $this->lastRequest = ['content' => $data, 'headers' => $headers];
         $result = curl_exec($ch);
+        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+
         if (curl_errno($ch)) {
-            $result = json_encode((object)['error' => 'curl_error', 'error_description' => curl_error($ch)]);
+            $result .= "\n" . json_encode((object)['error' => 'curl_error', 'error_description' => curl_error($ch)]);
         }
         curl_close($ch);
 
         // Return request response
-        return $oauthRequest ? new LinkedInOAuthResponse($result) : new LinkedInAPIResponse($result);
+        return $oauthRequest
+            ? new LinkedInOAuthResponse($result, $headerSize)
+            : new LinkedInAPIResponse($result, $headerSize);
     }
 
     /**
@@ -177,6 +186,7 @@ class LinkedIn
             'client_id' => $this->apiKey,
             'redirect_uri' => $this->redirectUri,
             'state' => time(),
+            'scope' => 'w_share r_basicprofile r_liteprofile w_member_social'
         ];
 
         if ($scope) {
@@ -192,7 +202,7 @@ class LinkedIn
      *
      * @param string $action The api endpoint for the request
      * @param array $data The data to send with the request
-     * @return string The access token
+     * @return LinkedInResponseInterface
      */
     public function post($action, array $data = [])
     {
@@ -204,7 +214,7 @@ class LinkedIn
      *
      * @param string $action The api endpoint for the request
      * @param array $data The data to send with the request
-     * @return string The access token
+     * @return LinkedInResponseInterface
      */
     public function get($action, array $data = [])
     {
@@ -213,22 +223,52 @@ class LinkedIn
 
     /**
      * Posts a share to LinkedIn using the previously authorized user profile
+     * See https://docs.microsoft.com/en-us/linkedin/marketing/integrations/community-management/shares/ugc-post-api
      *
      * @param array $data An array of data describing the post on LinkedIn including
-     *  - content: A collection of fields describing the shared content.
- 	 *  - - title: The title of the content being shared.
- 	 *  - - description	The description of the content being shared.	256
- 	 *  - - submitted-url: A fully qualified URL for the content being shared.
- 	 *  - - submitted-image-url: A fully qualified URL to a thumbnail image to accompany the shared content.
-     *  - comment: A comment by the member to associated with the share.
-     *      If none of the above content parameters are provided, the comment must contain a URL to the content you want
-     *      to share.  If the comment contains multiple URLs, only the first one will be analyzed for content to share.
-     *  - visibility: A collection of visibility information about the share.
-     *  - - code One of the following values:
-     *      anyone:  Share will be visible to all members.
-     *      connections-only:  Share will only be visible to connections of the member performing the share.
+     *  - specificContent: A collection of fields describing the shared content.
+     *  - - com.linkedin.ugc.ShareContent
+     *  - - - shareCommentary: Provides the primary content for the share.
+     *  - - - - text: The text to be shared
+     *  - - - shareMediaCategory: Represents the media assets attached to the share. ('NONE', 'ARTICLE', 'IMAGE')
+     *  - - - media: A collection of fields describing the attached media including (optional)
+     *  - - - - description: A short description for your image or article. (optional)
+     *  - - - - media: ID of the uploaded image asset. (Not required for uploading an article)
+     *  - - - - originalUrl: The URL of the article you would like to share here. (Required for uploading an article)
+     *  - - - - title: The title of your image or article. (optional)
+     *  - visibility: One of the following values:
+     *      PUBLIC: The share will be viewable by anyone on LinkedIn.
+     *      CONNECTIONS: The share will be viewable by 1st-degree connections only.
+     * @return LinkedInAPIResponse
      */
-    public function share(array $data) {
-        return $this->post('v1/people/~/shares', $data);
+    public function share(array $data)
+    {
+        // Set the author based on the currently authenticated user
+        $userResponse = $this->getUser();
+        if ($userResponse->status() == 200) {
+            $user = $userResponse->response();
+
+            $data['author'] = 'urn:li:person:' . $user->id;
+        }
+
+        // The lifecycle state for shares is always publisher
+        $data['lifecycleState'] = 'PUBLISHED';
+
+        // The status for shared media is always ready
+        if (isset($data['specificContent']['media'])) {
+            $data['specificContent']['media']['status'] = 'READY';
+        }
+
+        return $this->post('v2/ugcPosts', $data);
+    }
+
+    /**
+     * Gets information for the previously authorized user profile
+     *
+     * @return LinkedInAPIResponse
+     */
+    public function getUser()
+    {
+        return $this->get('v2/me');
     }
 }

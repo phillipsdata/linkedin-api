@@ -29,8 +29,9 @@ Get a URL to visit and be granted permissions from
 $permissions_url = $linkedin->getPermissionUrl(
     array(
         'r_basicprofile',
-        'r_emailaddress',
-        'w_share'
+        'r_liteprofile',
+        'w_share',
+        'w_member_social'
     )
 );
 
@@ -68,27 +69,51 @@ Additionally it will set the token on your current LinkedIn object which will us
 
 After this you can make any api call you like as long you know the endpoint and data required
 
-```php
-$data = array(
-  "comment" => "Check out developer.linkedin.com!",
-  "content" -> array(
-    "title" => "LinkedIn Developers Resources",
-    "description" => "Leverage LinkedIn's APIs to maximize engagement",
-    "submitted-url" => "https://developer.linkedin.com",  
-    "submitted-image-url" => "https://example.com/logo.png"
-  ),
-  "visibility" => array(
-    "code" => "anyone"
-  )  
-);
-$shareResponse = $this->post('v1/people/~/shares', $data);
-```
+See the [docs here](https://docs.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin?context=linkedin/consumer/context#create-a-text-share) for a full description of making a share request
 
+```php
+$data = [
+    'author' => 'urn:li:person:123456',
+    'lifecycleState' => 'PUBLISHED',
+    'specificContent' => [
+        'com.linkedin.ugc.ShareContent' => [
+            'shareCommentary' => [
+                'text' => "Leverage LinkedIn's APIs to maximize engagement"
+            ],
+            'shareMediaCategory' => 'NONE'
+        ]
+    ],
+    'visibility' => ['com.linkedin.ugc.MemberNetworkVisibility' => 'PUBLIC']
+];
+
+$shareResponse = $linkedin->post('v2/ugcPosts', $data);
+```
 The response is returned as an LinkedInAPIResponse object that can be accessed like this
 
 ```php
-$shareResponse->raw(); // Exactly what was returned by LinkedIn
+$shareResponse->headers(); // An array of header fields and their values
+$shareResponse->raw(); // Exactly what was returned by LinkedIn, including headers
 $shareResponse->response(); // An object containing the data returned by LinkedIn
 $shareResponse->errors(); // Any errors given in the response
-$shareResponse->status(); // 200 for a successful response
+$shareResponse->status(); // The status code returned by the request
+```
+
+The API also has a method called share() which take a little bit of work off of the user by defaulting fields like 'author' and 'lifecycleState'.
+
+This method worked different pre v2.x.  Instead it used version 1 of the LinkedIn api and simply defaulted the endpoint.
+
+```php
+$data = [
+    'specificContent' => [
+        'com.linkedin.ugc.ShareContent' => [
+            'shareCommentary' => [
+                'text' => "Leverage LinkedIn's APIs to maximize engagement"
+            ],
+            'shareMediaCategory' => 'NONE'
+        ]
+    ],
+    'visibility' => ['com.linkedin.ugc.MemberNetworkVisibility' => 'PUBLIC']
+];
+
+$shareResponse = $linkedin->share($data);
 ```

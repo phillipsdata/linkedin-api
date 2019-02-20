@@ -1,65 +1,20 @@
 <?php
 namespace Phillipsdata\LinkedIn;
 
-class LinkedInAPIResponse
+class LinkedInAPIResponse extends LinkedInResponse
 {
-    private $status;
-    private $raw;
-    private $response;
-    private $errors;
-
     /**
-     * LinkedInResponse constructor.
-     *
-     * @param string $apiResponse
+     * Sets any errors that where returned in the LinkedIn response
      */
-    public function __construct($apiResponse)
+    protected function setErrors()
     {
-        $this->raw = $apiResponse;
-        $this->response =  json_decode($apiResponse);
-        $this->status = isset($this->response->status) ? $this->response->status : 200;
-        if (isset($this->response->errorCode)) {
-            $this->errors = isset($this->response->message) ? $this->response->message : 'Unknown Error';
+        // Get the status if given, then record errors
+        if (isset($this->response->status)) {
+            $this->status = $this->response->status;
         }
-    }
 
-    /**
-     * Get the status of this response
-     *
-     * @return string The status of this response
-     */
-    public function status()
-    {
-        return $this->status;
-    }
-
-    /**
-     * Get the raw data from this response
-     *
-     * @return string The raw data from this response
-     */
-    public function raw()
-    {
-        return $this->raw;
-    }
-
-    /**
-     * Get the data response from this response
-     *
-     * @return string The data response from this response
-     */
-    public function response()
-    {
-        return $this->response;
-    }
-
-    /**
-     * Get any errors from this response
-     *
-     * @return string The errors from this response
-     */
-    public function errors()
-    {
-        return $this->errors;
+        if (isset($this->response->serviceErrorCode)) {
+            $this->errors = isset($this->response->message) ? $this->response->message : '';
+        }
     }
 }
