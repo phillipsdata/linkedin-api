@@ -56,7 +56,7 @@ The redirect will submit a 'code' get parameter to that location which can be us
 ```php
 $tokenResponse = $linkedin->getAccessToken($_GET['code']);
 
-if ($tokenResponse->status() < 300) {
+if ($tokenResponse->status() == 200) {
   // Record $tokenResponse->response() in some way
 } else {
   echo $tokenResponse->errors();
@@ -73,6 +73,8 @@ See the [docs here](https://docs.microsoft.com/en-us/linkedin/consumer/integrati
 
 ```php
 $data = [
+    'author' => 'urn:li:person:123456',
+    'lifecycleState' => 'PUBLISHED',
     'specificContent' => [
         'com.linkedin.ugc.ShareContent' => [
             'shareCommentary' => [
@@ -84,7 +86,7 @@ $data = [
     'visibility' => ['com.linkedin.ugc.MemberNetworkVisibility' => 'PUBLIC']
 ];
 
-$shareResponse = $this->post('v2/ugcPosts', $data);
+$shareResponse = $linkedin->post('v2/ugcPosts', $data);
 ```
 The response is returned as an LinkedInAPIResponse object that can be accessed like this
 
@@ -94,4 +96,24 @@ $shareResponse->raw(); // Exactly what was returned by LinkedIn, including heade
 $shareResponse->response(); // An object containing the data returned by LinkedIn
 $shareResponse->errors(); // Any errors given in the response
 $shareResponse->status(); // The status code returned by the request
+```
+
+The API also has a method called share() which take a little bit of work off of the user by defaulting fields like 'author' and 'lifecycleState'.
+
+This method worked different pre v2.x.  Instead it used version 1 of the LinkedIn api and simply defaulted the endpoint.
+
+```php
+$data = [
+    'specificContent' => [
+        'com.linkedin.ugc.ShareContent' => [
+            'shareCommentary' => [
+                'text' => "Leverage LinkedIn's APIs to maximize engagement"
+            ],
+            'shareMediaCategory' => 'NONE'
+        ]
+    ],
+    'visibility' => ['com.linkedin.ugc.MemberNetworkVisibility' => 'PUBLIC']
+];
+
+$shareResponse = $linkedin->share($data);
 ```
