@@ -226,14 +226,13 @@ class LinkedIn
      * See https://docs.microsoft.com/en-us/linkedin/marketing/integrations/community-management/shares/ugc-post-api
      *
      * @param string $content The text to be shared
-     * @param string $media_type Represents the media assets attached to the share. ('NONE', 'ARTICLE', 'IMAGE')
-     * @param array $media_urns A collection of IDs of the uploaded image assets. (Not required for uploading an article)
+     * @param array $media A collection of data the uploaded image assets.
      * @param string $visibility One of the following values:
      *      PUBLIC: The share will be viewable by anyone on LinkedIn.
      *      CONNECTIONS: The share will be viewable by 1st-degree connections only.
      * @return LinkedInAPIResponse
      */
-    public function share($content, $media_type = 'NONE', $media_urns = [], $visibility = 'PUBLIC')
+    public function share($content, $media = [], $visibility = 'PUBLIC')
     {
         // Set the author based on the currently authenticated user
         $author_urn = '';
@@ -252,7 +251,7 @@ class LinkedIn
                     'shareCommentary' => [
                         'text' => $content
                     ],
-                    'shareMediaCategory' => $media_type,
+                    'shareMediaCategory' => 'NONE',
                     'media' => []
                 ]
             ],
@@ -261,14 +260,28 @@ class LinkedIn
             ]
         ];
 
-        if ($media_type != 'NONE') {
-            foreach ($media_urns as $media_urn) {
-                $data['specificContent']['media'][] = (object)[
-                    'status' => 'READY',
-                    'description' => '',
-                    'media' => $media_urn,
-                    'title' => (object)['text' => '']
-                ];
+        foreach ($media as $medium) {
+            // Set the media fields
+            $data['specificContent']['com.linkedin.ugc.ShareContent']['media'][] = (object)[
+                'status' => 'READY',
+                'description' => isset($medium['description']) ? $medium['description'] : '',
+                'media' => isset($medium['urn']) ? $medium['urn'] : '',
+                'title' => (object)['text' => isset($medium['title']) ? $medium['title'] : '']
+            ];
+
+            // Set the media type
+            $media_type = $data['specificContent']['com.linkedin.ugc.ShareContent']['shareMediaCategory'];
+            if ($media_type != 'CAROUSEL'
+                && $media_type != 'NONE'
+                && isset($medium['type'])
+                && $media_type != $medium['type']
+            ) {
+                // Use the carousel type if the is media of multiple different formats
+                $data['specificContent']['com.linkedin.ugc.ShareContent']['shareMediaCategory'] = 'CAROUSEL';
+            } else {
+                $data['specificContent']['com.linkedin.ugc.ShareContent']['shareMediaCategory'] = isset($medium['type'])
+                    ? $medium['type']
+                    : 'IMAGE';
             }
         }
 

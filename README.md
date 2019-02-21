@@ -111,8 +111,12 @@ or
 ```php
 $shareResponse = $linkedin->share(
     'Leverage LinkedIn's APIs to maximize engagement',
-    'IMAGE',
-    ['urn:li:digitalmediaAsset:C5422AQEbc381YmIuvg'],
+    [
+        'urn' => 'urn:li:digitalmediaAsset:C5422AQEbc381YmIuvg',
+        'type' => 'IMAGE',
+        'title' => 'LinkedIn API',
+        'description' => 'Shows how great the LinkedIn API is.'
+    ],
     'CONNECTIONS'
 );
 ```
