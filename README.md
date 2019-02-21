@@ -98,22 +98,21 @@ $shareResponse->errors(); // Any errors given in the response
 $shareResponse->status(); // The status code returned by the request
 ```
 
-The API also has a method called share() which take a little bit of work off of the user by defaulting fields like 'author' and 'lifecycleState'.
+The API also has a method called share() which takes a bit of work off of the user by formatting the data how LinkedIn expects.
 
 This method worked different pre v2.x.  Instead it used version 1 of the LinkedIn api and simply defaulted the endpoint.
 
 ```php
-$data = [
-    'specificContent' => [
-        'com.linkedin.ugc.ShareContent' => [
-            'shareCommentary' => [
-                'text' => "Leverage LinkedIn's APIs to maximize engagement"
-            ],
-            'shareMediaCategory' => 'NONE'
-        ]
-    ],
-    'visibility' => ['com.linkedin.ugc.MemberNetworkVisibility' => 'PUBLIC']
-];
+$shareResponse = $linkedin->share('Leverage LinkedIn's APIs to maximize engagement');
+```
 
-$shareResponse = $linkedin->share($data);
+or
+
+```php
+$shareResponse = $linkedin->share(
+    'Leverage LinkedIn's APIs to maximize engagement',
+    'IMAGE',
+    ['urn:li:digitalmediaAsset:C5422AQEbc381YmIuvg'],
+    'CONNECTIONS'
+);
 ```

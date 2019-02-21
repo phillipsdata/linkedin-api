@@ -225,38 +225,51 @@ class LinkedIn
      * Posts a share to LinkedIn using the previously authorized user profile
      * See https://docs.microsoft.com/en-us/linkedin/marketing/integrations/community-management/shares/ugc-post-api
      *
-     * @param array $data An array of data describing the post on LinkedIn including
-     *  - specificContent: A collection of fields describing the shared content.
-     *  - - com.linkedin.ugc.ShareContent
-     *  - - - shareCommentary: Provides the primary content for the share.
-     *  - - - - text: The text to be shared
-     *  - - - shareMediaCategory: Represents the media assets attached to the share. ('NONE', 'ARTICLE', 'IMAGE')
-     *  - - - media: A collection of fields describing the attached media including (optional)
-     *  - - - - description: A short description for your image or article. (optional)
-     *  - - - - media: ID of the uploaded image asset. (Not required for uploading an article)
-     *  - - - - originalUrl: The URL of the article you would like to share here. (Required for uploading an article)
-     *  - - - - title: The title of your image or article. (optional)
-     *  - visibility: One of the following values:
+     * @param string $content The text to be shared
+     * @param string $media_type Represents the media assets attached to the share. ('NONE', 'ARTICLE', 'IMAGE')
+     * @param array $media_urns A collection of IDs of the uploaded image assets. (Not required for uploading an article)
+     * @param string $visibility One of the following values:
      *      PUBLIC: The share will be viewable by anyone on LinkedIn.
      *      CONNECTIONS: The share will be viewable by 1st-degree connections only.
      * @return LinkedInAPIResponse
      */
-    public function share(array $data)
+    public function share($content, $media_type = 'NONE', $media_urns = [], $visibility = 'PUBLIC')
     {
         // Set the author based on the currently authenticated user
+        $author_urn = '';
         $userResponse = $this->getUser();
         if ($userResponse->status() == 200) {
             $user = $userResponse->response();
 
-            $data['author'] = 'urn:li:person:' . $user->id;
+            $author_urn = 'urn:li:person:' . $user->id;
         }
 
-        // The lifecycle state for shares is always publisher
-        $data['lifecycleState'] = 'PUBLISHED';
+        $data = [
+            'author' => $author_urn,
+            'lifecycleState' => 'PUBLISHED',
+            'specificContent' => [
+                'com.linkedin.ugc.ShareContent' => [
+                    'shareCommentary' => [
+                        'text' => $content
+                    ],
+                    'shareMediaCategory' => $media_type,
+                    'media' => []
+                ]
+            ],
+            'visibility' => [
+                'com.linkedin.ugc.MemberNetworkVisibility' => $visibility
+            ]
+        ];
 
-        // The status for shared media is always ready
-        if (isset($data['specificContent']['media'])) {
-            $data['specificContent']['media']['status'] = 'READY';
+        if ($media_type != 'NONE') {
+            foreach ($media_urns as $media_urn) {
+                $data['specificContent']['media'][] = (object)[
+                    'status' => 'READY',
+                    'description' => '',
+                    'media' => $media_urn,
+                    'title' => (object)['text' => '']
+                ];
+            }
         }
 
         return $this->post('v2/ugcPosts', $data);
