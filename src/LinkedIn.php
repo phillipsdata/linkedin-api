@@ -270,10 +270,19 @@ class LinkedIn
             // Set the media fields
             $mediaData = (object)[
                 'status' => 'READY',
-                'description' => (object)['text' => isset($medium['description']) ? $medium['description'] : ''],
-                'title' => (object)['text' => isset($medium['title']) ? $medium['title'] : '']
             ];
 
+            // Set the media description
+            if (isset($medium['description'])) {
+                $mediaData->description = (object)['text' => $medium['description']];
+            }
+
+            // Set the media title
+            if (isset($medium['title'])) {
+                $mediaData->title = (object)['text' => $medium['title']];
+            }
+
+            // Set the media url or urn
             if (isset($medium['type']) && $medium['type'] == 'ARTICLE') {
                 $mediaData->originalUrl = isset($medium['url']) ? $medium['url'] : '';
             } else {
